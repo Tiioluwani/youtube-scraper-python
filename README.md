@@ -185,5 +185,3 @@ Zenrows product overview: https://www.zenrows.com/scrape/youtube
 YouTube Scraper: How to Scrape Video and Channel Data With Python (2026)
 
 https://www.zenrows.com/blog/youtube-scraper-how-to-scrape-video-and-channel-data-with-python-2026
-
-Publication status: pending.
