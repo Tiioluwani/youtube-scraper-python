@@ -1,0 +1,17 @@
+{
+  "saved_at_utc": "2026-10-22T15:01:00Z",
+  "source_artifact": "artifacts/channel-videos-10-20261022T140717Z/discovery.json",
+  "scope": "Fixed 10-video Blender official-channel sample from the completed metadata run.",
+  "videos": [
+    {"video_id": "sO_lhW8av3U", "url": "https://www.youtube.com/watch?v=sO_lhW8av3U"},
+    {"video_id": "SVJiCL3K0j4", "url": "https://www.youtube.com/watch?v=SVJiCL3K0j4"},
+    {"video_id": "TqP7Hyy_MFo", "url": "https://www.youtube.com/watch?v=TqP7Hyy_MFo"},
+    {"video_id": "0wpz3oqb0YA", "url": "https://www.youtube.com/watch?v=0wpz3oqb0YA"},
+    {"video_id": "k6l1CK0O_r4", "url": "https://www.youtube.com/watch?v=k6l1CK0O_r4"},
+    {"video_id": "EJEYFsWwqKk", "url": "https://www.youtube.com/watch?v=EJEYFsWwqKk"},
+    {"video_id": "TXtDfATbe0M", "url": "https://www.youtube.com/watch?v=TXtDfATbe0M"},
+    {"video_id": "X-zb1FxHuCw", "url": "https://www.youtube.com/watch?v=X-zb1FxHuCw"},
+    {"video_id": "fQrxjh0jhZM", "url": "https://www.youtube.com/watch?v=fQrxjh0jhZM"},
+    {"video_id": "7CfDEnHxPWA", "url": "https://www.youtube.com/watch?v=7CfDEnHxPWA"}
+  ]
+}

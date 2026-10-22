@@ -1,0 +1,22 @@
+{
+  "html": "<html>fixture only</html>",
+  "parsed": {
+    "channel": {
+      "channel_url": "https://www.youtube.com/@BlenderOfficial",
+      "name": "Blender"
+    },
+    "engagement": {
+      "like_count": "1.2K",
+      "view_count": 123456
+    },
+    "video": {
+      "canonical_url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+      "description": "A fixture description…",
+      "duration_iso": "PT2M3S",
+      "title": "Fixture video",
+      "upload_date": "2024-01-02T03:04:05+00:00",
+      "video_id": "aqz-KE-bpKQ"
+    }
+  }
+}
+

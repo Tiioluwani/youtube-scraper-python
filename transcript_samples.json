@@ -1,0 +1,51 @@
+{
+  "selected_at_utc": "2026-10-22T14:43:00Z",
+  "selection_scope": "Fixed functional sample from official organization channels; not a reliability benchmark.",
+  "verification_method": "yt-dlp 2026.06.09 caption-track metadata only; no media downloaded.",
+  "samples": [
+    {
+      "category": "manually_supplied_captions",
+      "video_id": "arj7oStGLkU",
+      "url": "https://www.youtube.com/watch?v=arj7oStGLkU",
+      "title": "Inside the Mind of a Master Procrastinator | Tim Urban | TED",
+      "channel": "TED",
+      "channel_id": "UCAuUUnT6oDeKwE6v1NGQxug",
+      "requested_language_code": "en",
+      "requested_track_type": "manual",
+      "selection_reason": "Verified existing English subtitle track; a separate English automatic track also exists, so the route must explicitly select the manual track."
+    },
+    {
+      "category": "automatically_generated_captions",
+      "video_id": "sO_lhW8av3U",
+      "url": "https://www.youtube.com/watch?v=sO_lhW8av3U",
+      "title": "Blender Conference 2026 Recap",
+      "channel": "Blender",
+      "channel_id": "UCSMOQeBJ2RAnuFungnQOxLg",
+      "requested_language_code": "en",
+      "requested_track_type": "generated",
+      "selection_reason": "Verified no uploaded subtitle tracks and an English auto-generated track."
+    },
+    {
+      "category": "existing_non_english_captions",
+      "video_id": "XfezG5M2ICg",
+      "url": "https://www.youtube.com/watch?v=XfezG5M2ICg",
+      "title": "The GOOSEBERRY project teaser - announcing Blender Foundation's feature animation movie",
+      "channel": "Blender",
+      "channel_id": "UCSMOQeBJ2RAnuFungnQOxLg",
+      "requested_language_code": "fr",
+      "requested_track_type": "manual",
+      "selection_reason": "Verified existing manually supplied French track; this is not a machine-translated English track."
+    },
+    {
+      "category": "no_captions",
+      "video_id": "aqz-KE-bpKQ",
+      "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ",
+      "title": "Big Buck Bunny 60fps 4K - Official Blender Foundation Short Film",
+      "channel": "Blender",
+      "channel_id": "UCSMOQeBJ2RAnuFungnQOxLg",
+      "requested_language_code": null,
+      "requested_track_type": null,
+      "selection_reason": "Verified empty uploaded-subtitle and automatic-caption track maps. The comparison routes must still distinguish blocking from caption absence."
+    }
+  ]
+}
