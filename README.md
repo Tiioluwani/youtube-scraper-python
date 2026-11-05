@@ -1,61 +1,79 @@
 # YouTube Scraper Python
 
-## Description
+This repository contains the Python scripts for **YouTube Scraper: How to Scrape Video and Channel Data With Python (2026)**, a Zenrows tutorial about collecting public YouTube video metadata and discovering public channel videos and Shorts.
 
-This repository accompanies a Zenrows tutorial about collecting public YouTube video and channel data with Python. It contains focused examples for one-video metadata extraction, channel discovery, transcript-route checks, and metadata-provider comparisons.
-
-The examples collect public metadata only. They do not download video media or intentionally collect comments or commenter data.
+The examples collect metadata and public video URLs only. They do not download media or intentionally collect comments or commenter data.
 
 ## Features
 
-- Fetches and normalizes one public video's title, description, channel, publication time, duration, views, and likes with Zenrows Fetch + Extract.
-- Discovers separate regular-video, Shorts, and stream IDs from a channel with Zenrows Fetch.
-- Provides a Playwright Browser Sessions route for scrolling a channel's regular-video grid.
-- Compares a fixed ten-video sample across Zenrows, YouTube Data API, yt-dlp, Apify, and a plain HTTP baseline.
-- Checks existing caption tracks with `youtube-transcript-api` and Zenrows without downloading media or generating transcription.
-- Preserves missing fields as `null`, keeps raw count strings where applicable, and qualifies description completeness.
-- Saves filtered local evidence without raw HTML, comments, credentials, or signed caption URLs.
+- Fetches and normalizes one public video's title, description, channel, publication time, duration, views, and likes with Zenrows Fetch and Extract.
+- Preserves unavailable values as `null` and records missing-field reasons.
+- Recovers `videoDetails.shortDescription` when it is available in returned page data and records the description source separately from truncation status.
+- Discovers unique regular-video or Shorts URLs from a channel with Zenrows Browser Sessions and Playwright.
+- Uses bounded channel limits and records elapsed time, scrolling attempts, partial results, and the stopping reason.
+- Saves filtered local evidence without raw HTML, comments, credentials, signed URLs, or media.
 
 ## Prerequisites
 
 - Python 3.12 or later
-- A Zenrows API key
-- Optional `YOUTUBE_API_KEY` for the YouTube Data API comparison
-- Optional `APIFY_API_TOKEN` for the Apify comparison
+- A [Zenrows API key](https://app.zenrows.com/register)
 
-The separate Browser Sessions route uses the pinned Playwright Python package and connects to Zenrows remotely; it does not require a locally downloaded Playwright browser.
+The Browser Sessions example uses the pinned Playwright Python package but connects to a remote Zenrows browser. It does not require a local Playwright browser download.
 
 ## Installation
 
-Windows PowerShell:
+Clone the repository:
+
+```bash
+git clone https://github.com/Tiioluwani/youtube-scraper-python.git
+cd youtube-scraper-python
+```
+
+Create and activate a virtual environment.
+
+**Windows PowerShell**
 
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements-dev.txt
 ```
 
-macOS or Linux:
+**Windows Command Prompt**
+
+```bat
+python -m venv .venv
+.venv\Scripts\activate.bat
+```
+
+**macOS or Linux**
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+```
+
+Install the dependencies:
+
+```bash
 python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Install the development dependencies to run the tests:
+
+```bash
 python -m pip install -r requirements-dev.txt
 ```
 
 ## Configuration
 
-Copy `.env.example` to `.env` and replace only the credentials needed by the routes you plan to run:
+Copy `.env.example` to `.env` and add your Zenrows API key:
 
 ```dotenv
 ZENROWS_API_KEY=replace_with_your_zenrows_api_key
-YOUTUBE_API_KEY=replace_with_your_youtube_data_api_key
-APIFY_API_TOKEN=replace_with_your_apify_api_token
 ```
 
-Alternatively, set the same names as process environment variables. `.env` is ignored by Git, and the scripts do not print credentials or credential-bearing request URLs.
+The scripts load a local `.env` file when present. You can alternatively set `ZENROWS_API_KEY` in the process environment. `.env` is ignored by Git, and the scripts do not print the key or credential-bearing request URLs.
 
 ## Project structure
 
@@ -63,125 +81,117 @@ Alternatively, set the same names as process environment variables. `.env` is ig
 .
 ├── .env.example
 ├── .gitignore
-├── ARTICLE_TEST_RESULTS.md
+├── LICENSE
 ├── README.md
-├── apify_metadata.py
 ├── browser_channel_discovery.py
-├── channel_discovery.py
-├── metadata_common.py
-├── metadata_comparison.py
-├── metadata_comparison_report.md
-├── metadata_sample_10.json
-├── plain_requests_baseline.py
 ├── requirements-dev.txt
 ├── requirements.txt
-├── transcript_comparison.py
-├── transcript_samples.json
-├── youtube_data_api_metadata.py
 ├── youtube_video.py
-├── ytdlp_metadata.py
+├── youtube_video_article.py
 └── tests
-    ├── fixtures/success.json
+    ├── fixtures
+    │   └── success.json
     ├── test_browser_channel_discovery.py
-    ├── test_channel_discovery.py
-    ├── test_metadata_comparison.py
-    ├── test_transcript_comparison.py
     └── test_youtube_video.py
 ```
 
-Local runs write ignored evidence under `artifacts/`. The repository contains fixed sample definitions and sanitized summaries, not live raw responses.
+- `youtube_video.py` is the complete single-video implementation used by the project tests.
+- `youtube_video_article.py` is a shorter standalone version suitable for following the article directly.
+- `browser_channel_discovery.py` discovers regular videos or Shorts through a remote Browser Session.
+- `tests/` contains fixture-based checks and makes no live requests.
+- Local runs write ignored evidence under `artifacts/`.
 
 ## How it works
 
-`youtube_video.py` canonicalizes a supplied YouTube video URL and calls `GET https://api.zenrows.com/v1/` with `mode=auto`, `extract=auto`, and metadata-only `extract_fields`. It never combines Adaptive Stealth Mode with manual `js_render` or `premium_proxy` parameters. The normalizer reads `parsed.video`, `parsed.channel`, and `parsed.engagement`, records field sources and missing reasons, and converts supported durations to seconds.
+### Fetch one video's metadata
 
-When a returned description ends in an ellipsis, the implementation checks decoded `videoDetails.shortDescription` in the in-memory response HTML. Finding that source field without an ellipsis establishes only that the selected source field was preserved; it does not independently prove that YouTube exposed the creator's complete original description. Raw HTML is not saved.
+Both video scripts accept a public YouTube watch, Shorts, embed, or `youtu.be` URL. They call the Zenrows Fetch endpoint with `mode=auto`, `extract=auto`, and metadata-only extraction fields.
 
-`channel_discovery.py` keeps regular videos, Shorts, and streams separate, deduplicates IDs, and records whether it stopped because the target was reached, the channel was exhausted, progress stalled, a timeout occurred, or a request failed. `browser_channel_discovery.py` is a separate Playwright route that scrolls the channel grid and reliably closes its remote session.
+The normalized record contains:
 
-The comparison scripts share the schema in `metadata_common.py` and the frozen sample in `metadata_sample_10.json`. yt-dlp runs without downloading media, Apify disables comments, transcript storage, and AI additions, and the transcript comparison never substitutes descriptions for captions.
+- video ID, canonical URL, title, and description
+- channel name and URL
+- publication time and duration in seconds
+- view and like counts
+- UTC fetch time, route, field sources, truncation status, and missing-field reasons
+
+Descriptions and counts remain `null` when unavailable. No missing numeric value is replaced with zero.
+
+### Discover channel videos or Shorts
+
+`browser_channel_discovery.py` connects Playwright to Zenrows Browser Sessions, waits for the YouTube channel grid, collects unique IDs, and scrolls the document when more results are needed. Regular videos and Shorts use separate URL selectors and canonical URL formats.
+
+Discovery stops when the requested limit is reached, the channel is demonstrably exhausted, loading stalls, the session expires, or the request fails. A stalled page is reported as `no_progress`, not as channel exhaustion.
+
+Every remote browser is closed in `finally` on success or failure.
 
 ## Running the project
 
-Fetch one public video with Zenrows Fetch + Extract:
+Fetch and normalize the Big Buck Bunny sample with the complete script:
 
-```powershell
+```bash
 python youtube_video.py "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
 ```
 
-Discover Blender's regular videos with Zenrows Fetch:
+Run the shorter standalone article version:
 
-```powershell
-python channel_discovery.py "https://www.youtube.com/@BlenderOfficial" --category videos --limit 10 --fetch-metadata-first 10 --metadata-connection-retries 1 --metadata-timeout-seconds 60
-python channel_discovery.py "https://www.youtube.com/@BlenderOfficial" --category videos --limit 100
-python channel_discovery.py "https://www.youtube.com/@BlenderOfficial" --category videos --limit 1000
+```bash
+python youtube_video_article.py "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
 ```
 
-Use `--category shorts` or `--category streams` to request those tabs without merging categories.
+Discover Blender's regular videos:
 
-Run the separate Browser Sessions discovery route:
-
-```powershell
-python browser_channel_discovery.py "https://www.youtube.com/@BlenderOfficial/videos" --limit 10
-python browser_channel_discovery.py "https://www.youtube.com/@BlenderOfficial/videos" --limit 100
-python browser_channel_discovery.py "https://www.youtube.com/@BlenderOfficial/videos" --limit 1000
+```bash
+python browser_channel_discovery.py "https://www.youtube.com/@BlenderOfficial/videos" --category videos --limit 10
 ```
 
-Run the fixed transcript comparison:
+Discover Blender's Shorts:
 
-```powershell
-python transcript_comparison.py
+```bash
+python browser_channel_discovery.py "https://www.youtube.com/@BlenderOfficial/shorts" --category shorts --limit 10
 ```
 
-Run all retained metadata comparison routes or one route at a time:
+The supported limits are `10`, `100`, and `1000`. Larger runs use longer remote-session TTLs and may incur higher usage.
 
-```powershell
-python metadata_comparison.py
-python youtube_data_api_metadata.py
-python ytdlp_metadata.py
-python apify_metadata.py
-python plain_requests_baseline.py
-```
+Run the fixture-based tests:
 
-Run fixture-based checks:
-
-```powershell
+```bash
 python -m pytest -q
 ```
 
 ## Output
 
-Successful one-video runs create ignored timestamped folders containing `response.filtered.json`, `normalized.json`, and `run.json`. Failures are recorded without credential-bearing URLs. Channel, transcript, and comparison scripts likewise save filtered JSON evidence under `artifacts/`.
+The video scripts create an ignored timestamped directory under `artifacts/` containing:
 
-Observed results on October 22, 2026 were mixed and should not be treated as a reliability benchmark:
+- `response.filtered.json`: filtered extraction evidence without raw HTML or comments
+- `normalized.json`: the shared normalized metadata record
+- `run.json`: status, elapsed time, route, request ID, and available billing headers
 
-- An earlier Zenrows Fetch + Extract run returned complete metadata for the ten fixed Blender videos, and the documented single-video example also succeeded. Later runs against the same sample returned HTTP 422 `no_data_extracted`, including both normal entry points. Those later failures remain the current limitation and are not hidden by the earlier successes.
-- Zenrows Fetch channel discovery reached 10 videos, but the 100- and 1,000-video runs stopped at 30 with `no_progress`. This does not establish a general 30-video Fetch limit.
-- Browser Sessions reached 10/10, 100/100, and 1,000/1,000 regular videos with 0, 3, and 33 scroll attempts respectively.
-- YouTube Data API, yt-dlp, and Apify each returned all ten fixed metadata records in their completed live runs. Apify reported observed billing of USD 0.04 for ten result events; the YouTube Data API exposed no quota-usage header.
-- Live transcript retrieval was unsuccessful. YouTube blocked caption fetching for the three captioned samples, while Zenrows returned empty timed-text bodies. The verified no-caption sample reported captions disabled.
-- A plain `requests` baseline returned initial HTML containing usable embedded metadata for one sample video, showing that JavaScript rendering was not required for every inspected field.
-- The experimental Fetch + Python HTML parser remained unable to recover usable shared-schema metadata and was removed from the repository rather than presented as a supported route.
-- A Zenrows CLI metadata example was untested because that client was unavailable. A configured Zenrows MCP example returned `AUTH003`, so MCP metadata was also untested.
+Failed runs save sanitized error evidence without credentials or credential-bearing request URLs.
 
-See `ARTICLE_TEST_RESULTS.md` for the concise outcome matrix and `metadata_comparison_report.md` for the ten-video metadata comparison.
+Browser Sessions discovery saves unique IDs, canonical URLs, timing, counts, and its stopping reason under `artifacts/`. A partial list is marked as partial.
+
+Live behavior can change. Earlier Fetch and Extract runs returned complete video metadata, while later tests returned `no_data_extracted` for the same sample. Browser Sessions successfully discovered regular videos and the first ten visible Blender Shorts in the recorded local checks. These observations are functional examples, not reliability guarantees.
 
 ## Technologies
 
 - Python 3.12+
-- Zenrows Fetch, Extract, and Browser Sessions
+- [Zenrows Fetch and Extract](https://docs.zenrows.com/fetch/api-reference)
+- [Zenrows Browser Sessions](https://docs.zenrows.com/browser-sessions/introduction)
 - Requests
 - Playwright
-- YouTube Data API
-- yt-dlp
-- Apify Python client
-- youtube-transcript-api
 - pytest
 
-Zenrows product overview: https://www.zenrows.com/scrape/youtube
+Zenrows' YouTube scraping product overview is available at [zenrows.com/scrape/youtube](https://www.zenrows.com/scrape/youtube).
+
+## Usage and limitations
+
+Use these examples only for public data and in accordance with YouTube's applicable terms and policies. Page structure, availability, consent flows, and anti-bot behavior can change. HTTP 200 alone does not establish that usable metadata was returned, and a stalled channel grid does not prove that the channel is exhausted.
+
+## License
+
+This project is available under the [MIT License](LICENSE).
 
 ## Related article
 
-YouTube Scraper: How to Scrape Video and Channel Data With Python (2026)
-
-https://www.zenrows.com/blog/youtube-scraper-how-to-scrape-video-and-channel-data-with-python-2026
+[**YouTube Scraper: How to Scrape Video and Channel Data With Python (2026)**](https://www.zenrows.com/blog/youtube-scraper-how-to-scrape-video-and-channel-data-with-python-2026)

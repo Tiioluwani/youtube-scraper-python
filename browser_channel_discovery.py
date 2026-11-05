@@ -1,4 +1,4 @@
-"""Discover regular YouTube video IDs through Zenrows Browser Sessions."""
+"""Discover YouTube video or Shorts IDs through Zenrows Browser Sessions."""
 
 from __future__ import annotations
 
@@ -17,28 +17,40 @@ from playwright.sync_api import sync_playwright
 
 CHANNEL_URL = "https://www.youtube.com/@BlenderOfficial/videos"
 ALLOWED_LIMITS = (10, 100, 1000)
+CATEGORIES = ("videos", "shorts")
 TTL_BY_LIMIT = {10: "2m", 100: "5m", 1000: "15m"}
 TTL_SECONDS = {10: 120, 100: 300, 1000: 900}
 MAX_STALLED_SCROLLS = 8
 GRID_SELECTOR = "ytd-rich-grid-renderer"
-VIDEO_LINK_SELECTOR = f'{GRID_SELECTOR} a[href*="/watch?v="]'
 
 
-def video_id_from_href(href: str) -> str | None:
+def link_selector(category: str) -> str:
+    if category == "shorts":
+        return f'{GRID_SELECTOR} a[href*="/shorts/"]'
+    return f'{GRID_SELECTOR} a[href*="/watch?v="]'
+
+
+def video_id_from_href(href: str, category: str = "videos") -> str | None:
     parsed = urlparse(href)
     if parsed.hostname and parsed.hostname not in {"youtube.com", "www.youtube.com"}:
         return None
-    candidate = parse_qs(parsed.query).get("v", [None])[0]
+    if category == "shorts":
+        parts = [part for part in parsed.path.split("/") if part]
+        candidate = parts[1] if len(parts) == 2 and parts[0] == "shorts" else None
+    else:
+        candidate = parse_qs(parsed.query).get("v", [None])[0]
     if candidate and len(candidate) == 11:
         return candidate
     return None
 
 
-def merge_hrefs(ids: list[str], hrefs: list[str], limit: int) -> int:
+def merge_hrefs(
+    ids: list[str], hrefs: list[str], limit: int, category: str = "videos"
+) -> int:
     known = set(ids)
     before = len(ids)
     for href in hrefs:
-        video_id = video_id_from_href(href)
+        video_id = video_id_from_href(href, category)
         if video_id and video_id not in known and len(ids) < limit:
             ids.append(video_id)
             known.add(video_id)
@@ -51,7 +63,7 @@ def session_url(api_key: str, ttl: str) -> str:
     )
 
 
-def discover(channel_url: str, limit: int, api_key: str) -> dict:
+def discover(channel_url: str, limit: int, api_key: str, category: str = "videos") -> dict:
     ttl = TTL_BY_LIMIT[limit]
     ttl_seconds = TTL_SECONDS[limit]
     ids: list[str] = []
@@ -63,6 +75,7 @@ def discover(channel_url: str, limit: int, api_key: str) -> dict:
     failure_type = None
     started = time.perf_counter()
     browser = None
+    item_selector = link_selector(category)
 
     try:
         with sync_playwright() as playwright:
@@ -85,10 +98,10 @@ def discover(channel_url: str, limit: int, api_key: str) -> dict:
             grid_seen = True
 
             while True:
-                hrefs = page.locator(VIDEO_LINK_SELECTOR).evaluate_all(
+                hrefs = page.locator(item_selector).evaluate_all(
                     "elements => elements.map(element => element.href)"
                 )
-                added = merge_hrefs(ids, hrefs, limit)
+                added = merge_hrefs(ids, hrefs, limit, category)
                 if len(ids) >= limit:
                     stop_reason = "requested_limit_reached"
                     break
@@ -127,7 +140,7 @@ def discover(channel_url: str, limit: int, api_key: str) -> dict:
                     end_evidence = state
                     break
 
-                previous_count = page.locator(VIDEO_LINK_SELECTOR).count()
+                previous_count = page.locator(item_selector).count()
                 page.evaluate(
                     """() => {
                         const root = document.scrollingElement;
@@ -138,7 +151,7 @@ def discover(channel_url: str, limit: int, api_key: str) -> dict:
                 try:
                     page.wait_for_function(
                         "([selector, count]) => document.querySelectorAll(selector).length > count",
-                        arg=[VIDEO_LINK_SELECTOR, previous_count],
+                        arg=[item_selector, previous_count],
                         timeout=5_000,
                     )
                 except PlaywrightTimeoutError:
@@ -161,6 +174,7 @@ def discover(channel_url: str, limit: int, api_key: str) -> dict:
     elapsed = time.perf_counter() - started
     return {
         "route": "zenrows_browser_sessions_playwright",
+        "category": category,
         "channel_url": channel_url,
         "requested_limit": limit,
         "unique_collected": len(ids),
@@ -176,6 +190,7 @@ def discover(channel_url: str, limit: int, api_key: str) -> dict:
             "session_ttl": ttl,
             "session_ttl_seconds": ttl_seconds,
             "grid_selector": GRID_SELECTOR,
+            "item_selector": item_selector,
             "scroll_container": "document.scrollingElement",
             "max_stalled_scrolls": MAX_STALLED_SCROLLS,
             "blocked_resource_types": ["image", "media", "font"],
@@ -190,7 +205,11 @@ def discover(channel_url: str, limit: int, api_key: str) -> dict:
         "items": [
             {
                 "video_id": video_id,
-                "url": f"https://www.youtube.com/watch?v={video_id}",
+                "url": (
+                    f"https://www.youtube.com/shorts/{video_id}"
+                    if category == "shorts"
+                    else f"https://www.youtube.com/watch?v={video_id}"
+                ),
             }
             for video_id in ids
         ],
@@ -201,6 +220,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("channel_url", nargs="?", default=CHANNEL_URL)
     parser.add_argument("--limit", type=int, choices=ALLOWED_LIMITS, required=True)
+    parser.add_argument("--category", choices=CATEGORIES, default="videos")
     args = parser.parse_args()
 
     load_dotenv()
@@ -209,12 +229,24 @@ def main() -> int:
         print("ZENROWS_API_KEY is not set.")
         return 2
 
-    result = discover(args.channel_url, args.limit, api_key)
+    result = discover(args.channel_url, args.limit, api_key, args.category)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    run_dir = Path("artifacts") / f"browser-channel-videos-{args.limit}-{timestamp}"
+    run_dir = Path("artifacts") / f"browser-channel-{args.category}-{args.limit}-{timestamp}"
     run_dir.mkdir(parents=True)
+    saved_result = result
+    if args.category == "shorts":
+        saved_result = {
+            "route": result["route"],
+            "category": result["category"],
+            "requested_limit": result["requested_limit"],
+            "unique_collected": result["unique_collected"],
+            "partial": result["partial"],
+            "elapsed_seconds": result["elapsed_seconds"],
+            "stopping_reason": result["stopping_reason"],
+            "items": result["items"],
+        }
     (run_dir / "discovery.json").write_text(
-        json.dumps(result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        json.dumps(saved_result, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
     )
     print(f"Saved Browser Sessions run to {run_dir}")
     print(

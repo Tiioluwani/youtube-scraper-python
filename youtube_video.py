@@ -259,6 +259,11 @@ def filter_response_for_storage(payload: Any) -> dict[str, Any]:
             "html_returned": isinstance(html, str),
             "html_characters": len(html) if isinstance(html, str) else None,
             "top_level_keys": sorted(payload) if isinstance(payload, dict) else None,
+            "problem": {
+                key: payload.get(key)
+                for key in ("code", "title", "detail", "status", "type")
+                if key in payload
+            } if isinstance(payload, dict) else None,
         },
     }
 

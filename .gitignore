@@ -9,3 +9,20 @@ htmlcov/
 .env
 artifacts/
 
+# Local article research, comparisons, and diagnostics.
+ARTICLE_TEST_RESULTS.md
+apify_metadata.py
+channel_discovery.py
+metadata_common.py
+metadata_comparison.py
+metadata_comparison_report.md
+metadata_sample_10.json
+plain_requests_baseline.py
+transcript_comparison.py
+transcript_samples.json
+youtube_data_api_metadata.py
+ytdlp_metadata.py
+tests/test_channel_discovery.py
+tests/test_metadata_comparison.py
+tests/test_transcript_comparison.py
+
